@@ -1,0 +1,525 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  RESIDENT
+  SINDICO
+  COUNCIL
+  PORTEIRO
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketCategory {
+  MAINTENANCE
+  COMPLAINT
+  SUGGESTION
+  OTHER
+}
+
+enum AnnouncementPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum VoteSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum VisitorStatus {
+  AUTHORIZED
+  DENIED
+  ENTERED
+  LEFT
+}
+
+enum VisitorType {
+  VISITOR
+  PROVIDER
+  DELIVERY
+}
+
+enum PackageStatus {
+  WAITING
+  PICKED_UP
+}
+
+enum MarketplaceType {
+  SALE
+  DONATION
+}
+
+enum MarketplaceStatus {
+  ACTIVE
+  SOLD
+  REMOVED
+}
+
+enum MaintenanceFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  DONE
+  OVERDUE
+}
+
+enum NotificationType {
+  PACKAGE
+  PAYMENT
+  RESERVATION
+  ASSEMBLY
+  ANNOUNCEMENT
+  TICKET
+  GENERAL
+}
+
+enum SplitStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(RESIDENT)
+  avatar    String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resident        Resident?
+  authoredTickets Ticket[]         @relation("TicketAuthor")
+  ticketResponses TicketResponse[]
+  announcements   Announcement[]
+  polls           Poll[]
+  voteSessions    VoteSession[]
+  authorizedVisitors Visitor[]     @relation("VisitorAuthorizedBy")
+  receivedPackages   Package[]     @relation("PackageReceivedBy")
+  marketplaceListings MarketplaceListing[]
+  chatMessages    ChatMessage[]
+  notifications   Notification[]
+  pollVotes       PollVote[]
+  sessionVotes    SessionVote[]
+
+  @@map("users")
+}
+
+model Resident {
+  id         String    @id @default(uuid())
+  userId     String    @unique
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unit       String
+  block      String
+  phone      String?
+  cpf        String?
+  moveInDate DateTime?
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  payments     Payment[]
+  reservations Reservation[]
+  packages     Package[]     @relation("PackageResident")
+  listings     MarketplaceListing[]
+
+  @@index([unit, block])
+  @@map("residents")
+}
+
+model CommonArea {
+  id           String   @id @default(cuid())
+  name         String
+  iconName     String   @default("Calendar")
+  capacity     Int
+  rules        String
+  rate         Float    @default(0)
+  minDays      Int      @default(0)
+  maxPerMonth  Int      @default(0)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reservations Reservation[]
+
+  @@map("common_areas")
+}
+
+model Reservation {
+  id         String            @id @default(uuid())
+  areaId     String
+  area       CommonArea        @relation(fields: [areaId], references: [id])
+  residentId String
+  resident   Resident          @relation(fields: [residentId], references: [id])
+  date       DateTime
+  timeSlot   String
+  status     ReservationStatus @default(PENDING)
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([areaId, date])
+  @@index([residentId])
+  @@map("reservations")
+}
+
+model Payment {
+  id         String        @id @default(uuid())
+  residentId String
+  resident   Resident      @relation(fields: [residentId], references: [id])
+  month      String
+  amount     Float
+  dueDate    DateTime
+  paidDate   DateTime?
+  status     PaymentStatus @default(PENDING)
+  barcode    String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([residentId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  description String
+  amount      Float
+  category    String
+  date        DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([date])
+  @@map("expenses")
+}
+
+model ExpenseSplit {
+  id          String      @id @default(uuid())
+  description String
+  total       Float
+  units       Int
+  perUnit     Float
+  status      SplitStatus @default(PENDING)
+  date        DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("expense_splits")
+}
+
+model Ticket {
+  id          String         @id @default(uuid())
+  title       String
+  description String
+  category    TicketCategory
+  status      TicketStatus   @default(OPEN)
+  authorId    String
+  author      User           @relation("TicketAuthor", fields: [authorId], references: [id])
+  hasPhoto    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  responses TicketResponse[]
+
+  @@index([status])
+  @@index([authorId])
+  @@map("tickets")
+}
+
+model TicketResponse {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  text      String
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@map("ticket_responses")
+}
+
+model Announcement {
+  id        String               @id @default(uuid())
+  title     String
+  body      String
+  priority  AnnouncementPriority @default(LOW)
+  authorId  String
+  author    User                 @relation(fields: [authorId], references: [id])
+  pinned    Boolean              @default(false)
+  expiresAt DateTime?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([priority])
+  @@index([pinned])
+  @@map("announcements")
+}
+
+model Poll {
+  id             String   @id @default(uuid())
+  question       String
+  deadline       DateTime
+  authorId       String
+  author         User     @relation(fields: [authorId], references: [id])
+  totalEligible  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  options  PollOption[]
+  votes    PollVote[]
+
+  @@map("polls")
+}
+
+model PollOption {
+  id     String @id @default(uuid())
+  pollId String
+  poll   Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  text   String
+  votes  Int    @default(0)
+
+  pollVotes PollVote[]
+
+  @@index([pollId])
+  @@map("poll_options")
+}
+
+model PollVote {
+  id       String @id @default(uuid())
+  pollId   String
+  poll     Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  optionId String
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([pollId, userId])
+  @@map("poll_votes")
+}
+
+model VoteSession {
+  id             String            @id @default(uuid())
+  title          String
+  description    String
+  deadline       DateTime
+  status         VoteSessionStatus @default(OPEN)
+  quorum         Int
+  totalEligible  Int
+  authorId       String
+  author         User              @relation(fields: [authorId], references: [id])
+  minutes        String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  options      VoteOption[]
+  sessionVotes SessionVote[]
+
+  @@map("vote_sessions")
+}
+
+model VoteOption {
+  id             String      @id @default(uuid())
+  voteSessionId  String
+  voteSession    VoteSession @relation(fields: [voteSessionId], references: [id], onDelete: Cascade)
+  text           String
+  votes          Int         @default(0)
+
+  sessionVotes SessionVote[]
+
+  @@index([voteSessionId])
+  @@map("vote_options")
+}
+
+model SessionVote {
+  id            String      @id @default(uuid())
+  voteSessionId String
+  voteSession   VoteSession @relation(fields: [voteSessionId], references: [id], onDelete: Cascade)
+  optionId      String
+  option        VoteOption  @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@unique([voteSessionId, userId])
+  @@map("session_votes")
+}
+
+model Visitor {
+  id             String        @id @default(uuid())
+  name           String
+  type           VisitorType
+  date           DateTime
+  time           String
+  unit           String
+  qrCode         String        @unique @default(cuid())
+  status         VisitorStatus @default(AUTHORIZED)
+  authorizedById String
+  authorizedBy   User          @relation("VisitorAuthorizedBy", fields: [authorizedById], references: [id])
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([date])
+  @@index([unit])
+  @@map("visitors")
+}
+
+model Package {
+  id           String        @id @default(uuid())
+  description  String
+  arrivedAt    DateTime      @default(now())
+  pickedAt     DateTime?
+  unit         String
+  residentId   String
+  resident     Resident      @relation("PackageResident", fields: [residentId], references: [id])
+  status       PackageStatus @default(WAITING)
+  receivedById String
+  receivedBy   User          @relation("PackageReceivedBy", fields: [receivedById], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([unit])
+  @@index([status])
+  @@map("packages")
+}
+
+model ServiceProvider {
+  id             String    @id @default(uuid())
+  name           String
+  service        String
+  entryTime      DateTime
+  exitTime       DateTime?
+  unit           String
+  document       String?
+  authorizedById String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([entryTime])
+  @@map("service_providers")
+}
+
+model ChatChannel {
+  id          String   @id @default(cuid())
+  name        String
+  iconName    String   @default("Globe")
+  description String?
+  createdAt   DateTime @default(now())
+
+  messages ChatMessage[]
+
+  @@map("chat_channels")
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid())
+  channelId String
+  channel   ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id])
+  text      String
+  createdAt DateTime    @default(now())
+
+  @@index([channelId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+model MarketplaceListing {
+  id         String            @id @default(uuid())
+  title      String
+  description String
+  price      Float             @default(0)
+  type       MarketplaceType
+  sellerId   String
+  seller     User              @relation(fields: [sellerId], references: [id])
+  residentId String
+  resident   Resident          @relation(fields: [residentId], references: [id])
+  imageUrl   String?
+  status     MarketplaceStatus @default(ACTIVE)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@map("marketplace_listings")
+}
+
+model MaintenanceTask {
+  id        String               @id @default(uuid())
+  title     String
+  frequency MaintenanceFrequency
+  nextDate  DateTime
+  lastDate  DateTime?
+  provider  String
+  status    MaintenanceStatus    @default(SCHEDULED)
+  notes     String?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([nextDate])
+  @@index([status])
+  @@map("maintenance_tasks")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  relatedId String?
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([read])
+  @@map("notifications")
+}
