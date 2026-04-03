@@ -3,7 +3,10 @@ import { Building, Eye, EyeOff, LogIn, Zap } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../../../components/ui/Button';
 
-const MOCK_USERS = [
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+
+// Apenas exibido quando VITE_DEMO_MODE=true — nunca inclui senhas
+const DEMO_USERS = [
   { name: 'Durval Martins', email: 'durval@email.com', role: 'Síndico', unit: '304-B', avatar: 'D' },
   { name: 'Camila Rodrigues', email: 'camila@email.com', role: 'Morador', unit: '101-A', avatar: 'C' },
   { name: 'Rafael Souza', email: 'rafael@email.com', role: 'Morador', unit: '502-A', avatar: 'R' },
@@ -12,8 +15,8 @@ const MOCK_USERS = [
 
 export function LoginPage() {
   const { login, isLoading, error } = useAuth();
-  const [email, setEmail] = useState('durval@email.com');
-  const [password, setPassword] = useState('senha123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -24,10 +27,10 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl flex flex-col lg:flex-row gap-8 items-center lg:items-start">
+      <div className={`w-full flex flex-col gap-8 items-center ${DEMO_MODE ? 'max-w-4xl lg:flex-row lg:items-start' : 'max-w-sm'}`}>
 
         {/* Left — form */}
-        <div className="w-full lg:max-w-sm">
+        <div className="w-full">
           <div className="text-center lg:text-left mb-8">
             <div className="w-16 h-16 bg-stone-900 rounded-2xl flex items-center justify-center mx-auto lg:mx-0 mb-4">
               <Building size={32} className="text-white" />
@@ -92,31 +95,33 @@ export function LoginPage() {
           </p>
         </div>
 
-        {/* Right — quick access */}
-        <div className="w-full lg:flex-1">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap size={14} className="text-orange-500" />
-            <span className="text-xs font-bold text-stone-500 uppercase tracking-widest">Acesso rápido (demo)</span>
+        {/* Right — quick access (apenas em modo demo) */}
+        {DEMO_MODE && (
+          <div className="w-full lg:flex-1">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap size={14} className="text-orange-500" />
+              <span className="text-xs font-bold text-stone-500 uppercase tracking-widest">Acesso rápido (demo)</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {DEMO_USERS.map((u) => (
+                <button
+                  key={u.email}
+                  onClick={() => login({ email: u.email, password: import.meta.env.VITE_DEMO_PASSWORD })}
+                  disabled={isLoading}
+                  className="flex items-center gap-3 bg-white rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left disabled:opacity-50"
+                >
+                  <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                    {u.avatar}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-stone-900 truncate">{u.name}</p>
+                    <p className="text-xs text-stone-400">{u.role} · {u.unit}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {MOCK_USERS.map((u) => (
-              <button
-                key={u.email}
-                onClick={() => login({ email: u.email, password: 'senha123' })}
-                disabled={isLoading}
-                className="flex items-center gap-3 bg-white rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left disabled:opacity-50"
-              >
-                <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                  {u.avatar}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-stone-900 truncate">{u.name}</p>
-                  <p className="text-xs text-stone-400">{u.role} · {u.unit}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
       </div>
     </div>
