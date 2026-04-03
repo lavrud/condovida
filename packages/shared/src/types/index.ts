@@ -392,6 +392,12 @@ export interface ApiError {
 
 // ── Auth ─────────────────────────────────────────────────────
 
+export interface JwtPayload {
+  sub: string;
+  email: string;
+  role: Role;
+}
+
 export interface LoginResponse {
   user: User;
   accessToken: string;
