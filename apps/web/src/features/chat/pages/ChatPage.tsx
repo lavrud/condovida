@@ -25,7 +25,7 @@ export function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-13rem)]">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-2xl font-bold text-stone-900">Chat</h1>

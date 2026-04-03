@@ -1,12 +1,22 @@
 import React from 'react';
-import { Bell, Receipt, Bookmark, Vote, Package } from 'lucide-react';
+import { Bell, Receipt, Bookmark, Vote, Package, CheckCircle2, Ticket, Megaphone, ShoppingBag, Calendar } from 'lucide-react';
 import { useAuthStore } from '../../../store/auth.store';
 import { useDashboard } from '../hooks/useDashboard';
 import { useNotifications } from '../../notifications/hooks/useNotifications';
 import { useGateway } from '../../gateway/hooks/useGateway';
 import { Card, Badge, IconContainer } from '../../../components/ui';
-import { fmt, fmtDate, greeting } from '../../../lib/utils';
+import { fmt, fmtDate, fmtRelative, greeting } from '../../../lib/utils';
 import { AnnouncementPriority } from '@condovida/shared';
+
+// ── Activity feed ─────────────────────────────────────────────
+const ACTIVITY = [
+  { id: '1', icon: Package,      color: 'bg-amber-100 text-amber-600',   text: 'Encomenda recebida na portaria',           at: new Date(Date.now() - 1000 * 60 * 18).toISOString() },
+  { id: '2', icon: Ticket,       color: 'bg-red-100 text-red-600',        text: 'Chamado #2 respondido pelo síndico',       at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
+  { id: '3', icon: CheckCircle2, color: 'bg-emerald-100 text-emerald-600',text: 'Pagamento de Jan/2025 confirmado',          at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
+  { id: '4', icon: Megaphone,    color: 'bg-orange-100 text-orange-600',  text: 'Novo comunicado: Manutenção elevadores',   at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
+  { id: '5', icon: Calendar,     color: 'bg-blue-100 text-blue-600',      text: 'Reserva da churrasqueira confirmada',      at: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString() },
+  { id: '6', icon: ShoppingBag,  color: 'bg-purple-100 text-purple-600',  text: 'Novo item nos classificados: Sofá 3 lug.', at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
+];
 
 const priorityColor: Record<AnnouncementPriority, string> = {
   [AnnouncementPriority.HIGH]: 'bg-red-400',
@@ -160,6 +170,33 @@ export function DashboardPage() {
           </Card>
         </div>
       ))}
+
+      {/* Activity Feed */}
+      <div>
+        <h2 className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-3">
+          Atividade recente
+        </h2>
+        <div className="relative">
+          {/* vertical line */}
+          <div className="absolute left-[18px] top-0 bottom-0 w-px bg-stone-100" />
+          <div className="space-y-1">
+            {ACTIVITY.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.id} className="flex items-start gap-3 relative">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${item.color}`}>
+                    <Icon size={15} />
+                  </div>
+                  <div className="flex-1 bg-white rounded-xl px-3 py-2.5 shadow-sm">
+                    <p className="text-sm text-stone-800 leading-snug">{item.text}</p>
+                    <p className="text-[10px] text-stone-400 mt-0.5">{fmtRelative(item.at)}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
