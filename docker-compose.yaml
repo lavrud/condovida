@@ -14,7 +14,7 @@ services:
     volumes:
       - api_data:/data
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://condovida.dvcode.com.br/health"]
+      test: ["CMD", "wget", "-qO-", "https://condovida.dvcode.com.br/health"]
       interval: 30s
       timeout: 10s
       retries: 3
