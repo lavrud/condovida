@@ -6,7 +6,7 @@ WORKDIR /app
 
 COPY package*.json ./
 # tsx is a devDependency but needed at runtime for TypeScript execution
-RUN npm ci
+RUN npm install
 
 COPY . .
 
