@@ -1,11 +1,6 @@
 import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { USERS } from '../../frontend/src/mocks/db.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '../../condovida.db');
+const DB_PATH = process.env.DATABASE_PATH || '/data/condovida.db';
 
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
@@ -25,7 +20,13 @@ db.exec(`
   )
 `);
 
-// Seed demo users se o banco estiver vazio
+const SEED_USERS = [
+  { id: '1', name: 'Demo User',         email: 'demo@email.com',    role: 'SINDICO',  unit: '304', block: 'B', avatar: 'D' },
+  { id: '2', name: 'Camila Rodrigues',  email: 'camila@email.com',  role: 'RESIDENT', unit: '101', block: 'A', avatar: 'C' },
+  { id: '3', name: 'Rafael Souza',      email: 'rafael@email.com',  role: 'RESIDENT', unit: '502', block: 'A', avatar: 'R' },
+  { id: '4', name: 'Beatriz Lima',      email: 'beatriz@email.com', role: 'COUNCIL',  unit: '203', block: 'B', avatar: 'B' },
+];
+
 const empty = (db.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number }).c === 0;
 if (empty) {
   const demoPassword = process.env.DEMO_PASSWORD;
@@ -37,8 +38,8 @@ if (empty) {
   );
 
   db.transaction(() => {
-    for (const u of USERS) {
-      insert.run({ id: u.id, name: u.name, email: u.email, password_hash: hash, role: u.role, unit: u.unit, block: u.block, avatar: u.avatar });
+    for (const u of SEED_USERS) {
+      insert.run({ ...u, password_hash: hash });
     }
   })();
 
