@@ -1,0 +1,42 @@
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      DATABASE_PATH: /data/condovida.db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      REFRESH_EXPIRES_IN: ${REFRESH_EXPIRES_IN:-7d}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      CORS_ORIGIN: https://condovida.dvcode.com.br
+    volumes:
+      - api_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_WS_URL: ""
+        VITE_USE_MOCK: "false"
+        VITE_DEMO_MODE: ${VITE_DEMO_MODE:-false}
+        VITE_DEMO_PASSWORD: ${VITE_DEMO_PASSWORD:-}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    labels:
+      - "coolify.managed=true"
+
+volumes:
+  api_data:
