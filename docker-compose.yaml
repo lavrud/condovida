@@ -1,8 +1,8 @@
 services:
   api:
     build:
-      context: ./api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: api/Dockerfile
     restart: unless-stopped
     environment:
       DATABASE_PATH: /data/condovida.db
@@ -14,7 +14,7 @@ services:
     volumes:
       - api_data:/data
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "https://condovida.dvcode.com.br/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
